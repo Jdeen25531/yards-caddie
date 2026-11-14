@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Yards-ee Caddie</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f7a45">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Caddie">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{--bg:#f4f6f3;--card:#fff;--ink:#16211a;--mute:#66736a;--line:#dfe5dc;--g:#1f7a45;--g2:#e3f2e8;--r:#b3392e;--r2:#fbe9e7;--gold:#e7a33a;--blue:#2f8fbf}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:520px;margin:0 auto;padding:calc(10px + env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom))}
+h1{font-size:19px;margin:4px 2px 10px;display:flex;justify-content:space-between;align-items:center}
+h1 small{font-weight:500;color:var(--mute);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.row{display:flex;gap:8px;align-items:center}.between{justify-content:space-between}
+.lbl{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.seg{display:flex;gap:6px}.seg button{flex:1}
+button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 6px;color:var(--ink);cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.on{background:var(--g);border-color:var(--g);color:#fff;font-weight:600}
+button:disabled{opacity:.4}
+.step{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.step button{border:0;border-radius:0;width:36px;padding:8px 0}.step span{min-width:30px;text-align:center;font-weight:600}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.rolls{display:flex;gap:6px;margin-bottom:10px}.rolls div{flex:1;text-align:center;padding:5px;border-radius:8px;background:#eef1ec;color:var(--mute);font-size:13px;font-weight:600}
+.rolls div.on{background:var(--g);color:#fff}
+.dice{display:flex;gap:8px;justify-content:center;margin:4px 0 10px}
+.die{width:56px;height:56px;border-radius:12px;border:2px solid #c9d1c6;background:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;position:relative;cursor:pointer}
+.die.empty{color:#c3cbc0;border-style:dashed}
+.die.Y{color:var(--gold)}
+.die.locked{background:#e9efe6;border-color:#8fa58f}
+.die.locked::after{content:"held";position:absolute;bottom:-16px;font-size:10px;color:var(--mute);font-weight:500}
+.die.sel{border-color:var(--g);box-shadow:0 0 0 3px #bfe3cb;background:var(--g2)}
+.die.next{border-color:var(--g);border-style:dashed}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:14px}
+.keys button{font-size:20px;font-weight:700;padding:10px 0}.keys .Y{color:var(--gold)}
+.rec{border-radius:12px;padding:12px;margin-top:4px}
+.rec.hold{background:var(--g2)}.rec.mull{background:#fff4e2}.rec.done{background:#eef3fb}
+.rec .big{font-size:18px;font-weight:700}.rec .sub{color:var(--mute);font-size:13px;margin-top:3px}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+th{font-weight:600;color:var(--mute);text-align:right;padding:4px 3px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase}
+td{text-align:right;padding:6px 3px;border-bottom:1px solid #eef1ec}
+th:first-child,td:first-child{text-align:left}
+tr.best td{font-weight:700;background:#f2faf4}
+.hold-chip{font-family:ui-monospace,Menlo,monospace;letter-spacing:1px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.actions button.primary{background:var(--g);border-color:var(--g);color:#fff;font-weight:600}
+.actions button.warn{background:#fff4e2;border-color:#f1d2a0}
+.tag{display:inline-block;padding:2px 7px;border-radius:999px;font-size:12px;font-weight:600}
+.t-good{background:var(--g2);color:var(--g)}.t-bad{background:var(--r2);color:var(--r)}.t-ok{background:#eef1ec;color:var(--ink)}
+.hint{font-size:12px;color:var(--mute);margin-top:6px}
+details summary{cursor:pointer;font-weight:600}
+.set{display:grid;grid-template-columns:1fr 110px;gap:6px 10px;align-items:center;margin-top:8px;font-size:14px}
+.set input,.set select{font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;width:100%}
+.score{display:flex;gap:14px;font-size:13px;color:var(--mute)}.score b{color:var(--ink);font-size:15px}
+.busy{color:var(--mute);font-size:13px}
+.log{font-size:12px;color:var(--mute);margin-top:6px;line-height:1.6}
+.rbt input{font:inherit;padding:5px;border:1px solid var(--line);border-radius:8px;width:100%;text-align:right}
+.rbt td{padding:3px}
+.pick{border:1px dashed #9db59f;border-radius:12px;padding:10px;margin-top:8px;font-size:13px}
+.pick b{font-size:14px}.loss{color:var(--r);font-weight:600}.even{color:var(--g);font-weight:600}
+.actions button.bonus{background:#fff1dc;border-color:#f0b768;color:#9a5a00;font-weight:700;grid-column:1/-1}
+tr.you td{background:#fffbe9}
+.sm{font-size:12px}
+.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
+.kpi div{background:#f3f6f2;border-radius:10px;padding:8px;text-align:center;font-size:12px;color:var(--mute)}
+.kpi b{display:block;font-size:17px;color:var(--ink)}
+</style></head><body><div class="wrap">
+<h1>⛳ Yards-ee Caddie <small id="calcState"></small></h1>
+
+<div class="card">
+  <div class="row between">
+    <div><div class="lbl">Hole</div><div class="step"><button data-act="hole-">−</button><span id="holeV">1</span><button data-act="hole+">+</button></div></div>
+    <div><div class="lbl">Mulligans left</div><div class="step"><button data-act="mull-">−</button><span id="mullV">1</span><button data-act="mull+">+</button></div></div>
+    <div class="score"><div>Total<br><b id="totRel">E</b></div><div>Yards<br><b id="totY">0</b></div></div>
+  </div>
+  <div class="lbl" style="margin-top:10px">Par this hole</div>
+  <div class="grid3" id="parBtns"><button data-par="3">Par 3</button><button data-par="4">Par 4</button><button data-par="5">Par 5</button></div>
+  <div class="hint" id="freeLine" style="display:none"></div>
+</div>
+
+<div class="card">
+  <div class="rolls"><div id="r1">Roll 1</div><div id="r2">Roll 2</div><div id="r3">Roll 3</div></div>
+  <div class="dice" id="dice"></div>
+  <div class="hint" id="diceHint" style="text-align:center"></div>
+  <div class="keys" id="keys">
+    <button data-face="0">2</button><button data-face="1">3</button><button data-face="2">4</button><button data-face="3">5</button>
+    <button data-face="4">6</button><button data-face="5" class="Y">Y</button><button data-act="back">⌫</button><button data-act="clear" style="font-size:14px">Clear</button>
+  </div>
+  <div id="out"></div>
+</div>
+
+<div class="card">
+<details id="setBox"><summary>Settings &amp; assumptions</summary>
+  <div class="set">
+    <label>Goal</label>
+    <select id="sGoal"><option value="1e7">Lowest strokes, yards break ties</option><option value="20000">Balanced (1 stroke = 20k yds)</option><option value="5000">Yards-heavy (1 stroke = 5k yds)</option></select>
+    <label>Free mulligan resets every hole</label><select id="sFree"><option value="0">No – round pool</option><option value="1">Yes – 1 free per hole</option></select>
+    <label>Course mix: Par 3 holes</label><input id="sM3" type="number" min="0" max="18" value="4">
+    <label>Par 4 holes</label><input id="sM4" type="number" min="0" max="18" value="10">
+    <label>Par 5 holes</label><input id="sM5" type="number" min="0" max="18" value="4">
+    <label>Hole-in-One yds (Par 3/4)</label><input id="yHio34" type="number" value="10000">
+    <label>Hole-in-One yds (Par 5)</label><input id="yHio5" type="number" value="50000">
+    <label>Five 3s on Par 3 (HIO) yds</label><input id="yHioP3" type="number" value="10000">
+    <label>Eagle yds</label><input id="yEagle" type="number" value="5000">
+    <label>Birdie yds</label><input id="yBirdie" type="number" value="1000">
+    <label>Par yds</label><input id="yPar" type="number" value="500">
+    <label>Bogey yds</label><input id="yBogey" type="number" value="0">
+    <label>Double Bogey yds</label><input id="yDb" type="number" value="-100">
+  </div>
+  <div class="lbl" style="margin-top:12px">RollBuster bonus (yds if you stop)</div>
+  <table class="rbt"><tr><th>Hand</th><th>After Roll 1</th><th>After Roll 2</th></tr>
+   <tr><td>Hole-in-One</td><td><input id="rb2_HIO" type="number"></td><td><input id="rb1_HIO" type="number"></td></tr>
+   <tr><td>Eagle</td><td><input id="rb2_Eagle" type="number"></td><td><input id="rb1_Eagle" type="number"></td></tr>
+   <tr><td>Birdie</td><td><input id="rb2_Birdie" type="number"></td><td><input id="rb1_Birdie" type="number"></td></tr>
+   <tr><td>Par</td><td><input id="rb2_Par" type="number"></td><td><input id="rb1_Par" type="number"></td></tr>
+   <tr><td>Bogey</td><td><input id="rb2_Bogey" type="number"></td><td><input id="rb1_Bogey" type="number"></td></tr>
+  </table>
+  <div class="actions"><button class="primary" id="applySet">Apply &amp; recalculate</button><button id="newRound">New round</button></div>
+  <div class="hint">The course mix is only used to estimate what a saved mulligan is worth later. Yardage defaults match the game screens. After-Roll-2 RollBuster (+10,000) is from your screenshots. <b>After-Roll-1 values are a guess (20,000).</b> Enter the real amount the first time you see one.</div>
+</details>
+</div>
+<div class="card" id="tracker"></div>
+</div>
+<script>
+// Yards-ee Caddie — exact dynamic-programming engine
+// Faces index: 0..4 = 2,3,4,5,6 ; 5 = Y (wild)
+const FACES = ['2','3','4','5','6','Y'];
+const PROB = [0.15,0.15,0.15,0.15,0.15,0.25];
+const POW = [1,6,36,216,1296,7776];
+const NB = 7;              // rel-to-par bins: -4..+2  -> index rel+4
+const F_U = 7, F_Y = 8, F_FR = 9, F_FY = 10, NF = 11; // fields per state
+
+// ---- multisets of size 0..5 over 6 faces ----
+const MS = [];                       // {key, c:[6], n}
+const IDX = new Int16Array(46656).fill(-1);
+(function enumerate(){
+  const c=[0,0,0,0,0,0];
+  (function rec(i,rem){
+    if(i===6){ const n=c.reduce((a,b)=>a+b,0); const key=c.reduce((a,v,j)=>a+v*POW[j],0);
+      IDX[key]=MS.length; MS.push({key,c:c.slice(),n}); return; }
+    for(let v=0; v<=rem; v++){ c[i]=v; rec(i+1,rem-v); } c[i]=0;
+  })(0,5);
+})();
+const NMS = MS.length; // 462
+const fact=[1,1,2,6,24,120];
+// outcomes of rolling n dice
+const OUT = [[],[],[],[],[],[]];
+for(const m of MS){
+  let p=fact[m.n]; for(let j=0;j<6;j++) p*=Math.pow(PROB[j],m.c[j])/fact[m.c[j]];
+  OUT[m.n].push({key:m.key,p});
+}
+const HANDS = MS.map((m,i)=>i).filter(i=>MS[i].n===5); // 252
+// sub-multisets of each multiset (for holds)
+const SUBS = new Array(NMS);
+for(let i=0;i<NMS;i++){
+  const c=MS[i].c, res=[];
+  (function rec(j,key){ if(j===6){res.push(IDX[key]);return;}
+    for(let v=0; v<=c[j]; v++) rec(j+1,key+v*POW[j]); })(0,0);
+  SUBS[i]=res;
+}
+
+// ---- scoring ----
+const DEFAULT_YARDS = {hio34:10000, hio5:50000, eagle:5000, birdie:1000, par:500, bogey:0, dbogey:-100, hioPar3Eagle:10000};
+function evalHand(c, par, Y){
+  // returns {rel, yards, name}
+  const y=c[5];
+  if(y===5) return {rel:1-par, yards: par===5?Y.hio5:Y.hio34, name:'Hole-in-One'};
+  const pi=par-2, pc=c[pi]+y;
+  let mo=0; for(let i=0;i<5;i++) if(i!==pi) mo=Math.max(mo,c[i]+y);
+  if(pc===5) return par===3 ? {rel:-2,yards:Y.hioPar3Eagle,name:'Hole-in-One'} : {rel:-2,yards:Y.eagle,name:'Eagle'};
+  if(mo===5) return {rel:-1,yards:Y.birdie,name:'Birdie'};
+  if(pc===4) return {rel:0,yards:Y.par,name:'Par'};
+  if(mo===4||pc===3) return {rel:1,yards:Y.bogey,name:'Bogey'};
+  return {rel:2,yards:Y.dbogey,name:'Double Bogey'};
+}
+
+// ---- mulligan states s=(f,m), f in {0,1}, m in 0..MMAX ----
+const MMAX=9;
+const sIndex=(f,m)=>f*(MMAX+1)+m;
+const NS = 2*(MMAX+1);
+const sOrder=[]; for(let f=0;f<2;f++) for(let m=0;m<=MMAX;m++) sOrder.push([f,m]);
+function sPrev(f,m){ if(f) return sIndex(0,m); if(m>0) return sIndex(0,m-1); return -1; }
+
+// Solve one hole.
+// cont: {U:[], R:[], Y:[]} indexed by pool m at end of hole
+// returns M[r][s] = Float64Array(NMS*NF): value of rolling the dice not in K,
+//   after which r rolls remain (r=2 after roll 1, 1 after roll 2, 0 after roll 3)
+// RB: RollBuster yards by rolls remaining (2 = after roll 1, 1 = after roll 2) and hand name
+function rbAmt(RB,r,name){ return (RB&&RB[r]&&RB[r][name])||0; }
+function canStop(RB,r,t){ return r>0 && (t.rel<=0 || rbAmt(RB,r,t.name)>0); }
+function solveHole(par, cont, Yd, W, RB){
+  const term = new Array(NMS); // per hand index
+  for(const h of HANDS){ term[h]=evalHand(MS[h].c,par,Yd); }
+  const M=[[],[],[]];
+  const acc = new Float64Array(NMS*NF);
+  for(let r=0;r<3;r++){
+    for(const [f,m] of sOrder){
+      const s=sIndex(f,m);
+      // accept value for each full hand
+      for(const h of HANDS){
+        const o=h*NF;
+        if(r===0){
+          for(let b=0;b<NB;b++) acc[o+b]=0;
+          const t=term[h]; acc[o+t.rel+4]=1; acc[o+F_Y]=t.yards;
+          acc[o+F_U]=-W*t.rel+t.yards+cont.U[m]; acc[o+F_FR]=cont.R[m]; acc[o+F_FY]=cont.Y[m];
+        } else {
+          const src=M[r-1][s]; let best=-1, bu=-Infinity;
+          for(const j of SUBS[h]){ if(MS[j].n===5) continue; const u=src[j*NF+F_U]; if(u>bu+1e-9){bu=u;best=j;} }
+          const t=term[h]; let stopped=false;
+          if(canStop(RB,r,t)){
+            const rb=rbAmt(RB,r,t.name), su=-W*t.rel+t.yards+rb+cont.U[m];
+            if(su>bu+1e-9){ stopped=true;
+              for(let b=0;b<NB;b++) acc[o+b]=0; acc[o+t.rel+4]=1; acc[o+F_Y]=t.yards+rb;
+              acc[o+F_U]=su; acc[o+F_FR]=cont.R[m]; acc[o+F_FY]=cont.Y[m]; }
+          }
+          if(!stopped) for(let k=0;k<NF;k++) acc[o+k]=src[best*NF+k];
+        }
+      }
+      const arr=new Float64Array(NMS*NF);
+      const sp=sPrev(f,m), mull = sp>=0 ? M[r][sp] : null;
+      for(let K=0;K<NMS;K++){
+        const n=5-MS[K].n, kk=MS[K].key, o=K*NF;
+        const useMull = mull && n>0;
+        for(const out of OUT[n]){
+          const h=IDX[kk+out.key], ho=h*NF;
+          let srcArr=acc, so=ho;
+          if(useMull && mull[o+F_U] > acc[ho+F_U]+1e-9){ srcArr=mull; so=o; }
+          const p=out.p;
+          for(let k=0;k<NF;k++) arr[o+k]+=p*srcArr[so+k];
+        }
+      }
+      M[r][s]=arr;
+    }
+  }
+  return M;
+}
+
+// Cross-hole value of the mulligan pool. Wt[h] for h holes remaining.
+function buildFuture(opts){
+  const {Yd, W, mix, freePerHole, RB} = opts;
+  const fut=[{U:new Array(MMAX+1).fill(0),R:new Array(MMAX+1).fill(0),Y:new Array(MMAX+1).fill(0)}];
+  for(let h=1;h<=17;h++){
+    const prev=fut[h-1], cur={U:[],R:[],Y:[]};
+    for(let m=0;m<=MMAX;m++){cur.U[m]=0;cur.R[m]=0;cur.Y[m]=0;}
+    for(const par of [3,4,5]){
+      const p=mix[par]; if(!p) continue;
+      const M=solveHole(par,prev,Yd,W,RB);
+      for(let m=0;m<=MMAX;m++){
+        const s=sIndex(freePerHole?1:0,m), o=IDX[0]*NF, a=M[2][s];
+        let er=0; for(let b=0;b<NB;b++) er+=a[o+b]*(b-4);
+        cur.U[m]+=p*a[o+F_U]; cur.R[m]+=p*(er+a[o+F_FR]); cur.Y[m]+=p*(a[o+F_Y]+a[o+F_FY]);
+      }
+    }
+    fut.push(cur);
+  }
+  return fut;
+}
+
+if(typeof module!=='undefined') module.exports={rbAmt,canStop,FACES,PROB,MS,IDX,NF,NB,F_U,F_Y,F_FR,F_FY,SUBS,POW,evalHand,solveHole,buildFuture,sIndex,sPrev,DEFAULT_YARDS,MMAX};
+
+// ================= APP =================
+const $=id=>document.getElementById(id);
+const CAT_ORDER=['Hole-in-One','Eagle','Birdie','Par','Bogey','Double Bogey'];
+const RB_KEYS={HIO:'Hole-in-One',Eagle:'Eagle',Birdie:'Birdie',Par:'Par',Bogey:'Bogey'};
+function freshState(){return {par:null,hole:1,pool:1,freeUsed:false,roll:1,slots:blankSlots(),hist:[],hs:null,loss:0,lossY:0};}
+function blankSlots(){return [0,1,2,3,4].map(()=>({v:null,locked:false,sel:false}));}
+function defaultCfg(){return {W:1e7,free:0,mix:[4,10,4],Y:Object.assign({},DEFAULT_YARDS),
+  RB:{2:{'Hole-in-One':20000,'Eagle':20000,'Birdie':20000,'Par':20000,'Bogey':0},1:{'Hole-in-One':10000,'Eagle':10000,'Birdie':10000,'Par':10000,'Bogey':0}}};}
+function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+let cfg=Object.assign(defaultCfg(),lsGet('yardsCfg2')||{});
+let st=Object.assign(freshState(),lsGet('yardsState2')||{});
+let life=lsGet('yardsLife2')||{holes:0,er:0,rel:0,ey:0,yards:0,exp:[0,0,0,0,0,0],act:[0,0,0,0,0,0],loss:0};
+let undoStack=[], FUT=null, cache={};
+
+function cfgToUI(){const g=$('sGoal');g.value=String(cfg.W);if(g.value!==String(cfg.W)){const o=document.createElement('option');o.value=String(cfg.W);o.textContent='Custom: 1 stroke = '+cfg.W+' yds';g.appendChild(o);g.value=String(cfg.W);}
+ $('sFree').value=String(cfg.free);$('sM3').value=cfg.mix[0];$('sM4').value=cfg.mix[1];$('sM5').value=cfg.mix[2];
+ const Y=cfg.Y;$('yHio34').value=Y.hio34;$('yHio5').value=Y.hio5;$('yHioP3').value=Y.hioPar3Eagle;$('yEagle').value=Y.eagle;$('yBirdie').value=Y.birdie;$('yPar').value=Y.par;$('yBogey').value=Y.bogey;$('yDb').value=Y.dbogey;
+ for(const r of [1,2]) for(const k in RB_KEYS) $('rb'+r+'_'+k).value=cfg.RB[r][RB_KEYS[k]]||0;}
+function uiToCfg(){const n=id=>Number($(id).value)||0;cfg.W=Number($('sGoal').value);cfg.free=Number($('sFree').value);cfg.mix=[n('sM3'),n('sM4'),n('sM5')];
+ cfg.Y={hio34:n('yHio34'),hio5:n('yHio5'),hioPar3Eagle:n('yHioP3'),eagle:n('yEagle'),birdie:n('yBirdie'),par:n('yPar'),bogey:n('yBogey'),dbogey:n('yDb')};
+ for(const r of [1,2]){cfg.RB[r]={};for(const k in RB_KEYS)cfg.RB[r][RB_KEYS[k]]=n('rb'+r+'_'+k);}}
+function recalc(){
+  FUT=null;$('calcState').textContent='calculating…';render();
+  setTimeout(()=>{const tot=cfg.mix[0]+cfg.mix[1]+cfg.mix[2]||1;
+    FUT=buildFuture({Yd:cfg.Y,W:cfg.W,mix:{3:cfg.mix[0]/tot,4:cfg.mix[1]/tot,5:cfg.mix[2]/tot},freePerHole:!!cfg.free,RB:cfg.RB});cache={};
+    $('calcState').textContent='';render();},30);
+}
+function holeSolution(par,hole){par=par||st.par;hole=hole||st.hole;const key=par+'_'+hole;if(!cache[key])cache[key]=solveHole(par,FUT[18-hole],cfg.Y,cfg.W,cfg.RB);return cache[key];}
+const fmtRel=x=>{const v=Math.round(x*100)/100;return Math.abs(v)<0.005?'E':(v>0?'+':'')+v.toFixed(2);};
+const fmtRelI=x=>x===0?'E':(x>0?'+':'')+x;
+const pct=x=>x>=0.9995?'100%':(x*100<0.05?(x>0?'<0.1%':'0%'):(x*100).toFixed(1)+'%');
+const yds=x=>Math.round(x).toLocaleString();
+const countsOf=arr=>{const c=[0,0,0,0,0,0];arr.forEach(v=>c[v]++);return c;};
+const keyOf=c=>c.reduce((a,v,j)=>a+v*POW[j],0);
+const labelC=c=>{let s=[];for(let i=0;i<6;i++)for(let k=0;k<c[i];k++)s.push(FACES[i]);return s.length?s.join(' '):'nothing';};
+const catIdx=(rel,par)=>rel===1-par?0:rel===-2?1:rel===-1?2:rel===0?3:rel===1?4:5;
+function curS(){const f=(cfg.free&&!st.freeUsed)?1:0;return {f,m:st.pool,s:sIndex(f,st.pool),sp:sPrev(f,st.pool)};}
+function statsOf(arr,i){const o=i*NF;let er=0,pp=0,pb=0,pe=0;const dist=[];for(let b=0;b<NB;b++){const p=arr[o+b];dist.push(p);er+=p*(b-4);if(b<=4)pp+=p;if(b<=3)pb+=p;if(b<=2)pe+=p;}
+ return {er,pp,pb,pe,ey:arr[o+F_Y],u:arr[o+F_U],fr:arr[o+F_FR],dist};}
+function fixedStats(rel,yards,fut,m){const dist=[0,0,0,0,0,0,0];dist[rel+4]=1;return {er:rel,pp:rel<=0?1:0,pb:rel<=-1?1:0,pe:rel<=-2?1:0,ey:yards,u:-cfg.W*rel+yards+fut.U[m],fr:fut.R[m],dist};}
+
+function analyze(){
+  const vals=st.slots.map(s=>s.v); if(!FUT||st.par==null||vals.some(v=>v==null)) return null;
+  const M=holeSolution(), {f,m,s,sp}=curS(), r=3-st.roll, fut=FUT[18-st.hole];
+  const Kc=countsOf(st.slots.filter(x=>x.locked).map(x=>x.v)), Hc=countsOf(vals);
+  const Ki=IDX[keyOf(Kc)], Hi=IDX[keyOf(Hc)], nRolled=st.slots.filter(x=>!x.locked).length;
+  const cur=evalHand(Hc,st.par,cfg.Y), opts=[]; let stop=null, mull=null, stand=null;
+  if(r>0){
+    for(const j of SUBS[Hi]){ if(MS[j].n===5) continue; opts.push(Object.assign({type:'hold',J:j,label:'Hold '+labelC(MS[j].c)},statsOf(M[r-1][s],j))); }
+    if(canStop(cfg.RB,r,cur)){ const rb=rbAmt(cfg.RB,r,cur.name);
+      stop=Object.assign({type:'stop',rb,label:rb?`⚡ Stop: ${cur.name} +${Math.round(rb/1000)}k`:`Lock in ${cur.name}`},fixedStats(cur.rel,cur.yards+rb,fut,m)); opts.push(stop); }
+  } else { stand=Object.assign({type:'stand',label:'Keep '+cur.name},fixedStats(cur.rel,cur.yards,fut,m)); opts.push(stand); }
+  if(sp>=0&&nRolled>0){ mull=Object.assign({type:'mull',label:`Mulligan (re-roll the ${nRolled})`},statsOf(M[r][sp],Ki)); mull.cost=f?0:(fut.R[m-1]-fut.R[m]); opts.push(mull); }
+  opts.forEach(o=>{o.net=o.er+(o.fr-fut.R[m]);});
+  opts.sort((a,b)=>b.u-a.u);
+  // the player's current selection
+  let pick=null; const selC=countsOf(st.slots.filter(x=>x.sel).map(x=>x.v)), selN=selC.reduce((a,b)=>a+b,0);
+  if(r===0) pick=stand; else if(selN===5) pick=stop; else { const ji=IDX[keyOf(selC)]; pick=opts.find(o=>o.type==='hold'&&o.J===ji)||null; }
+  return {opts,cur,r,mull,stop,stand,pick,selN,f,m,best:opts[0]};
+}
+function startStats(){const M=holeSolution(),{s}=curS();return statsOf(M[2][s],IDX[0]);}
+
+function optRow(o,i,isPick){return `<tr class="${i===0?'best':''} ${isPick&&i!==0?'you':''}"><td>${o.label}${isPick?' <span class="sm">◀ you</span>':''}</td><td>${fmtRel(o.net)}</td><td>${pct(o.pp)}</td><td>${pct(o.pb)}</td><td>${pct(o.pe)}</td><td>${yds(o.ey)}</td></tr>`;}
+
+function render(){
+  $('holeV').textContent=st.hole; $('mullV').textContent=st.pool;
+  const totRel=st.hist.reduce((a,h)=>a+h.rel,0), totY=st.hist.reduce((a,h)=>a+h.yards,0);
+  $('totRel').textContent=fmtRelI(totRel); $('totY').textContent=yds(totY);
+  document.querySelectorAll('#parBtns button').forEach(b=>b.classList.toggle('on',Number(b.dataset.par)===st.par));
+  ['r1','r2','r3'].forEach((id,i)=>$(id).classList.toggle('on',st.roll===i+1));
+  $('freeLine').style.display=cfg.free?'block':'none';
+  $('freeLine').textContent=cfg.free?(st.freeUsed?'Free mulligan used this hole.':'Free mulligan available this hole (plus '+st.pool+' in pool).'):'';
+  const firstEmpty=st.slots.findIndex(s=>!s.locked&&s.v==null);
+  $('dice').innerHTML=st.slots.map((s,i)=>`<div class="die ${s.v==null?'empty':''} ${s.v===5?'Y':''} ${s.locked?'locked':''} ${s.sel?'sel':''} ${i===firstEmpty?'next':''}" data-slot="${i}">${s.v==null?'?':FACES[s.v]}</div>`).join('');
+  renderTracker(); lsSet('yardsState2',st);
+  const out=$('out');
+  if(!FUT){out.innerHTML='<p class="busy">Calculating odds…</p>';return;}
+  if(st.par==null){out.innerHTML='<p class="hint">Pick this hole’s par, then enter your Roll 1 dice.</p>';$('diceHint').textContent='';return;}
+  const noDice=st.slots.every(s=>s.v==null);
+  if(st.roll===1&&noDice&&!st.freeUsedThisHole){ const x=startStats(); st.hs={par:st.par,er:x.er,ey:x.ey,dist:x.dist}; }
+  const A=analyze();
+  if(!A){
+    $('diceHint').textContent=st.roll===1?'Enter all 5 dice from Roll 1':'Enter the '+st.slots.filter(s=>!s.locked).length+' re-rolled dice';
+    if(st.roll===1&&noDice&&st.hs){const x=st.hs;
+      out.innerHTML=`<p class="hint">Par ${st.par} with best play: average <b>${fmtRel(x.er)}</b> · par+ <b>${pct(x.dist.slice(0,5).reduce((a,b)=>a+b,0))}</b> · birdie+ <b>${pct(x.dist.slice(0,4).reduce((a,b)=>a+b,0))}</b> · eagle+ <b>${pct(x.dist.slice(0,3).reduce((a,b)=>a+b,0))}</b> · ~<b>${yds(x.ey)}</b> yds</p>`;}
+    else out.innerHTML='';
+    return;
+  }
+  $('diceHint').textContent=A.r>0?'Tap dice to choose what you hold. Odds update live.':'Final roll';
+  const best=A.best, curTag=`<span class="tag ${A.cur.rel<=-1?'t-good':A.cur.rel>=1?'t-bad':'t-ok'}">${A.cur.name} ${fmtRelI(A.cur.rel)}</span>`;
+  let rec;
+  if(best.type==='mull'){
+    const alt=A.opts.find(o=>o.type!=='mull');
+    rec=`<div class="rec mull"><div class="big">Undo Roll (use a mulligan)</div><div class="sub">Re-roll the same ${st.slots.filter(s=>!s.locked).length} dice. This hole averages ${fmtRel(best.er)} vs ${fmtRel(alt.er)} if you play on.${best.cost?` A saved mulligan is worth ~${best.cost.toFixed(2)} strokes later, so this is the right time to spend one.`:' The free one costs nothing.'}</div></div>`;
+  } else if(best.type==='stand'){
+    rec=`<div class="rec done"><div class="big">Final: ${A.cur.name} (${fmtRelI(A.cur.rel)}) · ${yds(A.cur.yards)} yds</div><div class="sub">${A.mull?`Keep it. A mulligan would average ${fmtRel(A.mull.er)} here (saving ${(A.cur.rel-A.mull.er).toFixed(2)}), but a saved mulligan is worth ~${A.mull.cost.toFixed(2)} strokes later.`:'Record it and go to the next hole.'}</div></div>`;
+  } else if(best.type==='stop'){
+    const alt=A.opts.find(o=>o.type==='hold');
+    rec=`<div class="rec mull"><div class="big">${best.rb?'Take the RollBuster':'Lock it in'}: ${A.cur.name} · +${yds(best.ey)} yds</div><div class="sub">Stopping beats rolling on${alt?` (${fmtRel(alt.net)} avg, ~${yds(alt.ey)} yds)`:''}.</div></div>`;
+  } else {
+    const nh=MS[best.J].n, second=A.opts[1], close=second&&Math.abs(best.net-second.net)<0.01;
+    rec=`<div class="rec hold"><div class="big">${nh===0?'Re-roll all 5':'Hold <span class="hold-chip">'+labelC(MS[best.J].c)+'</span>'}</div><div class="sub">${nh>0?'Re-roll the other '+(5-nh)+'. ':''}Avg ${fmtRel(best.net)} · par+ ${pct(best.pp)} · birdie+ ${pct(best.pb)} · eagle+ ${pct(best.pe)} · ~${yds(best.ey)} yds${close?' · runner-up is nearly as good':''}${A.stop?`<br>Beats stopping for the ${yds(A.stop.rb)} RollBuster (${fmtRel(A.stop.net)}, ${yds(A.stop.ey)} yds).`:''}</div></div>`;
+  }
+  // your pick
+  let pickHtml='';
+  if(A.r>0){
+    if(A.selN===5&&!A.stop) pickHtml=`<div class="pick">All 5 held. The game won't roll with 5 selected, and this hand can't be locked in. Un-hold at least one die.</div>`;
+    else if(A.pick&&A.pick!==best){const dl=A.pick.net-best.net, dy=A.pick.ey-best.ey;
+      pickHtml=`<div class="pick"><b>Your pick: ${A.pick.label}</b><br>Avg ${fmtRel(A.pick.net)} · par+ ${pct(A.pick.pp)} · birdie+ ${pct(A.pick.pb)} · eagle+ ${pct(A.pick.pe)} · ~${yds(A.pick.ey)} yds<br>${dl>0.0005?`<span class="loss">Costs ${dl.toFixed(2)} strokes</span>`:'<span class="even">Same strokes</span>'} and ${dy>=0?'+':''}${yds(dy)} yds compared with the recommendation.</div>`;}
+    else if(A.pick===best) pickHtml=`<div class="pick"><span class="even">✓ Your selection matches the recommendation.</span></div>`;
+  }
+  const shown=A.opts.slice(0,6); if(A.pick&&!shown.includes(A.pick)) shown.push(A.pick);
+  const rows=shown.map(o=>optRow(o,A.opts.indexOf(o),o===A.pick)).join('');
+  const nSel=st.slots.filter(s=>s.sel).length;
+  let btns='';
+  if(A.r>0) btns+=`<button class="primary" data-act="next" ${nSel===5?'disabled':''} style="grid-column:1/-1">${nSel===5?'Can’t roll with 5 held':`Roll ${5-nSel} dice (Roll ${st.roll+1})`}</button>`;
+  else btns+=`<button class="primary" data-act="finish" style="grid-column:1/-1">Record ${A.cur.name} &amp; next hole →</button>`;
+  if(A.stop) btns+=`<button class="bonus" data-act="stop">${A.stop.rb?`⚡ Took RollBuster: ${A.cur.name} +${yds(A.stop.ey)} yds → next hole`:`Locked in ${A.cur.name} → next hole`}</button>`;
+  if(A.mull) btns+=`<button class="warn" data-act="usemull" style="grid-column:1/-1">I used Undo Roll (mulligan)</button>`;
+  out.innerHTML=`<div class="row between" style="margin:2px 0 8px"><span class="hint" style="margin:0">Current hand</span>${curTag}</div>${rec}${pickHtml}
+   <table><tr><th>Option</th><th>Avg*</th><th>Par+</th><th>Bird+</th><th>Eagle+</th><th>Yds</th></tr>${rows}</table>
+   <div class="actions">${btns}</div>
+   <div class="hint">*Average strokes vs par, counting the value of any mulligan the plan may spend. Par+/Bird+/Eagle+ = chance of finishing the hole at that score or better. Yds includes RollBuster bonuses the plan expects to take.</div>
+   <div class="actions"><button data-act="undo" ${undoStack.length?'':'disabled'}>Undo</button><button data-act="resethole">Reset hole</button></div>`;
+}
+
+function renderTracker(){
+  const H=st.hist, el=$('tracker');
+  if(!H.length&&!life.holes){el.innerHTML='<div class="lbl">Odds vs actual</div><p class="hint">After each hole, this compares what the odds said to expect against what actually happened.</p>';return;}
+  const sum=(a,f)=>a.reduce((s,x)=>s+f(x),0);
+  const er=sum(H,h=>h.er), rel=sum(H,h=>h.rel), ey=sum(H,h=>h.ey), yd=sum(H,h=>h.yards), loss=sum(H,h=>h.loss);
+  const exp=[0,0,0,0,0,0], act=[0,0,0,0,0,0];
+  H.forEach(h=>{h.dist.forEach((p,b)=>{if(p>0)exp[catIdx(b-4,h.par)]+=p;});act[catIdx(h.rel,h.par)]++;});
+  const luck=rel-er-loss;
+  const L={holes:life.holes+H.length,er:life.er+er,rel:life.rel+rel,ey:life.ey+ey,yards:life.yards+yd,loss:life.loss+loss};
+  el.innerHTML=`<div class="lbl">Odds vs actual · this round (${H.length} hole${H.length===1?'':'s'})</div>
+  <div class="kpi"><div>Expected<b>${fmtRel(er)}</b></div><div>Actual<b>${fmtRelI(rel)}</b></div><div>${luck<=0?'Luck (good)':'Luck (bad)'}<b class="${luck<=0?'even':'loss'}">${luck>0?'+':''}${luck.toFixed(2)}</b></div>
+  <div>Exp. yds<b>${yds(ey)}</b></div><div>Actual yds<b>${yds(yd)}</b></div><div>Choice cost<b class="${loss>0.005?'loss':'even'}">${loss.toFixed(2)}</b></div></div>
+  <div class="hint" style="margin-top:0">Luck = actual − expected − choice cost (negative means the dice were kind). Choice cost = strokes given up by picks that differed from the recommendation.</div>
+  <table><tr><th>Result</th><th>Expected #</th><th>Actual #</th></tr>${CAT_ORDER.map((c,i)=>`<tr><td>${c}</td><td>${exp[i].toFixed(2)}</td><td>${act[i]}</td></tr>`).join('')}</table>
+  <details style="margin-top:8px"><summary class="sm">Hole by hole</summary><table><tr><th>Hole</th><th>Par</th><th>Exp</th><th>Actual</th><th>Yds</th></tr>
+  ${H.map(h=>`<tr><td>${h.hole}</td><td>${h.par}</td><td>${fmtRel(h.er)}</td><td>${h.name} ${fmtRelI(h.rel)}${h.rb?' ⚡':''}</td><td>${yds(h.yards)}</td></tr>`).join('')}</table></details>
+  <div class="hint">All time (${L.holes} holes): expected ${fmtRel(L.er)}, actual ${fmtRelI(L.rel)}, luck ${(L.rel-L.er-L.loss>0?'+':'')+(L.rel-L.er-L.loss).toFixed(2)}; yds ${yds(L.yards)} vs ${yds(L.ey)} expected; choice cost ${L.loss.toFixed(2)}.</div>
+  <div class="actions"><button data-act="resetlife">Reset all-time stats</button><span></span></div>`;
+}
+
+function applyRecSelection(){
+  const A=analyze(); if(!A) return;
+  st.slots.forEach(s=>s.sel=false);
+  const target = A.best.type==='hold'?A.best : A.best.type==='stop'?null : A.opts.find(o=>o.type==='hold');
+  if(A.best.type==='stop'){st.slots.forEach(s=>s.sel=true);return;}
+  if(!target) return;
+  const want=MS[target.J].c.slice();
+  // prefer already-held dice, then the new ones
+  [true,false].forEach(lockedFirst=>st.slots.forEach(s=>{if(s.locked===lockedFirst&&!s.sel&&want[s.v]>0){s.sel=true;want[s.v]--;}}));
+}
+function pushUndo(){undoStack.push(JSON.stringify(st)); if(undoStack.length>30) undoStack.shift();}
+function enter(face){const i=st.slots.findIndex(s=>!s.locked&&s.v==null);if(i<0)return;pushUndo();st.slots[i].v=face;if(st.slots.every(s=>s.v!=null))applyRecSelection();render();}
+function recordChoice(A,chosen){ if(A&&chosen){ st.loss+=Math.max(0,chosen.net-A.best.net); } }
+function finishHole(ev,rb){
+  const hs=st.hs||{er:0,ey:0,dist:[0,0,0,0,0,0,0]};
+  st.hist.push({hole:st.hole,par:st.par,er:hs.er,ey:hs.ey,dist:hs.dist,rel:ev.rel,yards:ev.yards+rb,rb,name:ev.name,loss:st.loss});
+  if(st.hole<18)st.hole++; st.par=null;st.roll=1;st.freeUsed=false;st.freeUsedThisHole=false;st.hs=null;st.loss=0;st.slots=blankSlots();
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button,.die'); if(!t||t.disabled) return;
+  if(t.dataset.face!=null) return enter(Number(t.dataset.face));
+  if(t.dataset.par){pushUndo();st.par=Number(t.dataset.par);if(st.slots.every(s=>s.v!=null))applyRecSelection();return render();}
+  if(t.dataset.slot!=null){const s=st.slots[Number(t.dataset.slot)];
+    if(st.slots.every(x=>x.v!=null)){ if(3-st.roll>0) s.sel=!s.sel; }
+    else if(!s.locked&&s.v!=null){pushUndo();s.v=null;}
+    return render();}
+  const a=t.dataset.act; if(!a) return;
+  const A=analyze();
+  if(a==='hole-'&&st.hole>1){st.hole--;}
+  if(a==='hole+'&&st.hole<18){st.hole++;}
+  if(a==='mull-'&&st.pool>0){st.pool--;}
+  if(a==='mull+'&&st.pool<MMAX){st.pool++;}
+  if(a==='back'){for(let i=4;i>=0;i--){const s=st.slots[i];if(!s.locked&&s.v!=null){pushUndo();s.v=null;break;}}}
+  if(a==='clear'){pushUndo();st.slots.forEach(s=>{if(!s.locked)s.v=null;});}
+  if(a==='usemull'){pushUndo();recordChoice(A,A&&A.mull);st.freeUsedThisHole=true;if(cfg.free&&!st.freeUsed)st.freeUsed=true;else st.pool--;st.slots.forEach(s=>{if(!s.locked)s.v=null;s.sel=false;});}
+  if(a==='next'){pushUndo();recordChoice(A,A&&A.pick);st.slots.forEach(s=>{if(s.sel){s.locked=true;}else{s.locked=false;s.v=null;}s.sel=false;});st.roll++;}
+  if(a==='stop'&&A&&A.stop){pushUndo();recordChoice(A,A.stop);finishHole(A.cur,A.stop.rb);}
+  if(a==='finish'&&A){pushUndo();recordChoice(A,A.stand);finishHole(A.cur,0);}
+  if(a==='resethole'){pushUndo();st.roll=1;st.freeUsedThisHole=false;st.loss=0;st.slots=blankSlots();}
+  if(a==='undo'&&undoStack.length){st=JSON.parse(undoStack.pop());}
+  if(a==='resetlife'){life={holes:0,er:0,rel:0,ey:0,yards:0,exp:[0,0,0,0,0,0],act:[0,0,0,0,0,0],loss:0};lsSet('yardsLife2',life);}
+  if(['hole-','hole+','mull-','mull+'].includes(a)&&st.slots.every(s=>s.v!=null))applyRecSelection();
+  render();
+});
+$('applySet').onclick=()=>{uiToCfg();lsSet('yardsCfg2',cfg);recalc();};
+$('newRound').onclick=()=>{ // archive this round into all-time stats
+  const H=st.hist; if(H.length){life.holes+=H.length;H.forEach(h=>{life.er+=h.er;life.rel+=h.rel;life.ey+=h.ey;life.yards+=h.yards;life.loss+=h.loss;});lsSet('yardsLife2',life);}
+  st=freshState();undoStack=[];render();};
+cfgToUI();render();recalc();
+
+try{if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js');}catch(e){}
+</script></body></html>
