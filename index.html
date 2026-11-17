@@ -86,6 +86,7 @@ tr.you td{background:#fffbe9}
 
 <div class="card">
   <div class="rolls"><div id="r1">Roll 1</div><div id="r2">Roll 2</div><div id="r3">Roll 3</div></div>
+  <div class="actions" id="navBar" style="margin:-2px 0 10px"></div>
   <div class="dice" id="dice"></div>
   <div class="hint" id="diceHint" style="text-align:center"></div>
   <div class="keys" id="keys">
@@ -277,7 +278,7 @@ function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 let cfg=Object.assign(defaultCfg(),lsGet('yardsCfg2')||{});
 let st=Object.assign(freshState(),lsGet('yardsState2')||{});
 let life=lsGet('yardsLife2')||{holes:0,er:0,rel:0,ey:0,yards:0,exp:[0,0,0,0,0,0],act:[0,0,0,0,0,0],loss:0};
-let undoStack=[], FUT=null, cache={};
+let undoStack=lsGet('yardsUndo2')||[], FUT=null, cache={};
 
 function cfgToUI(){const g=$('sGoal');g.value=String(cfg.W);if(g.value!==String(cfg.W)){const o=document.createElement('option');o.value=String(cfg.W);o.textContent='Custom: 1 stroke = '+cfg.W+' yds';g.appendChild(o);g.value=String(cfg.W);}
  $('sFree').value=String(cfg.free);$('sM3').value=cfg.mix[0];$('sM4').value=cfg.mix[1];$('sM5').value=cfg.mix[2];
@@ -339,6 +340,8 @@ function render(){
   $('freeLine').textContent=cfg.free?(st.freeUsed?'Free mulligan used this hole.':'Free mulligan available this hole (plus '+st.pool+' in pool).'):'';
   const firstEmpty=st.slots.findIndex(s=>!s.locked&&s.v==null);
   $('dice').innerHTML=st.slots.map((s,i)=>`<div class="die ${s.v==null?'empty':''} ${s.v===5?'Y':''} ${s.locked?'locked':''} ${s.sel?'sel':''} ${i===firstEmpty?'next':''}" data-slot="${i}">${s.v==null?'?':FACES[s.v]}</div>`).join('');
+  const sb=stepBackLabel();
+  $('navBar').innerHTML=`<button data-act="stepback" ${sb?'':'disabled'}>◀ ${sb||'Back to previous roll'}</button><button data-act="undo" ${undoStack.length?'':'disabled'}>↶ Undo last tap</button><button data-act="resethole" style="grid-column:1/-1;font-size:13px;padding:6px">Reset this hole</button>`;
   renderTracker(); lsSet('yardsState2',st);
   const out=$('out');
   if(!FUT){out.innerHTML='<p class="busy">Calculating odds…</p>';return;}
@@ -388,7 +391,7 @@ function render(){
    <table><tr><th>Option</th><th>Avg*</th><th>Par+</th><th>Bird+</th><th>Eagle+</th><th>Yds</th></tr>${rows}</table>
    <div class="actions">${btns}</div>
    <div class="hint">*Average strokes vs par, counting the value of any mulligan the plan may spend. Par+/Bird+/Eagle+ = chance of finishing the hole at that score or better. Yds includes RollBuster bonuses the plan expects to take.</div>
-   <div class="actions"><button data-act="undo" ${undoStack.length?'':'disabled'}>Undo</button><button data-act="resethole">Reset hole</button></div>`;
+`;
 }
 
 function renderTracker(){
@@ -421,7 +424,9 @@ function applyRecSelection(){
   // prefer already-held dice, then the new ones
   [true,false].forEach(lockedFirst=>st.slots.forEach(s=>{if(s.locked===lockedFirst&&!s.sel&&want[s.v]>0){s.sel=true;want[s.v]--;}}));
 }
-function pushUndo(){undoStack.push(JSON.stringify(st)); if(undoStack.length>30) undoStack.shift();}
+const STEP_TAGS=['next','finish','stop','usemull'];
+function pushUndo(tag){undoStack.push({tag:tag||'tap',s:JSON.stringify(st)}); if(undoStack.length>60) undoStack.shift(); lsSet('yardsUndo2',undoStack);}
+function stepBackLabel(){for(let i=undoStack.length-1;i>=0;i--){const t=undoStack[i].tag;if(STEP_TAGS.includes(t))return t==='next'?'Back to previous roll':t==='usemull'?'Undo the mulligan':'Back to last hole';}return null;}
 function enter(face){const i=st.slots.findIndex(s=>!s.locked&&s.v==null);if(i<0)return;pushUndo();st.slots[i].v=face;if(st.slots.every(s=>s.v!=null))applyRecSelection();render();}
 function recordChoice(A,chosen){ if(A&&chosen){ st.loss+=Math.max(0,chosen.net-A.best.net); } }
 function finishHole(ev,rb){
@@ -445,12 +450,14 @@ document.addEventListener('click',e=>{
   if(a==='mull+'&&st.pool<MMAX){st.pool++;}
   if(a==='back'){for(let i=4;i>=0;i--){const s=st.slots[i];if(!s.locked&&s.v!=null){pushUndo();s.v=null;break;}}}
   if(a==='clear'){pushUndo();st.slots.forEach(s=>{if(!s.locked)s.v=null;});}
-  if(a==='usemull'){pushUndo();recordChoice(A,A&&A.mull);st.freeUsedThisHole=true;if(cfg.free&&!st.freeUsed)st.freeUsed=true;else st.pool--;st.slots.forEach(s=>{if(!s.locked)s.v=null;s.sel=false;});}
-  if(a==='next'){pushUndo();recordChoice(A,A&&A.pick);st.slots.forEach(s=>{if(s.sel){s.locked=true;}else{s.locked=false;s.v=null;}s.sel=false;});st.roll++;}
-  if(a==='stop'&&A&&A.stop){pushUndo();recordChoice(A,A.stop);finishHole(A.cur,A.stop.rb);}
-  if(a==='finish'&&A){pushUndo();recordChoice(A,A.stand);finishHole(A.cur,0);}
-  if(a==='resethole'){pushUndo();st.roll=1;st.freeUsedThisHole=false;st.loss=0;st.slots=blankSlots();}
-  if(a==='undo'&&undoStack.length){st=JSON.parse(undoStack.pop());}
+  if(a==='usemull'){pushUndo('usemull');recordChoice(A,A&&A.mull);st.freeUsedThisHole=true;if(cfg.free&&!st.freeUsed)st.freeUsed=true;else st.pool--;st.slots.forEach(s=>{if(!s.locked)s.v=null;s.sel=false;});}
+  if(a==='next'){pushUndo('next');recordChoice(A,A&&A.pick);st.slots.forEach(s=>{if(s.sel){s.locked=true;}else{s.locked=false;s.v=null;}s.sel=false;});st.roll++;}
+  if(a==='stop'&&A&&A.stop){pushUndo('stop');recordChoice(A,A.stop);finishHole(A.cur,A.stop.rb);}
+  if(a==='finish'&&A){pushUndo('finish');recordChoice(A,A.stand);finishHole(A.cur,0);}
+  if(a==='resethole'){pushUndo('reset');st.roll=1;st.freeUsedThisHole=false;st.loss=0;st.slots=blankSlots();}
+  if(a==='undo'&&undoStack.length){st=JSON.parse(undoStack.pop().s);lsSet('yardsUndo2',undoStack);}
+  if(a==='stepback'){let i=undoStack.length-1;while(i>=0&&!STEP_TAGS.includes(undoStack[i].tag))i--;
+    if(i>=0){st=JSON.parse(undoStack[i].s);undoStack=undoStack.slice(0,i);lsSet('yardsUndo2',undoStack);}}
   if(a==='resetlife'){life={holes:0,er:0,rel:0,ey:0,yards:0,exp:[0,0,0,0,0,0],act:[0,0,0,0,0,0],loss:0};lsSet('yardsLife2',life);}
   if(['hole-','hole+','mull-','mull+'].includes(a)&&st.slots.every(s=>s.v!=null))applyRecSelection();
   render();
@@ -458,7 +465,7 @@ document.addEventListener('click',e=>{
 $('applySet').onclick=()=>{uiToCfg();lsSet('yardsCfg2',cfg);recalc();};
 $('newRound').onclick=()=>{ // archive this round into all-time stats
   const H=st.hist; if(H.length){life.holes+=H.length;H.forEach(h=>{life.er+=h.er;life.rel+=h.rel;life.ey+=h.ey;life.yards+=h.yards;life.loss+=h.loss;});lsSet('yardsLife2',life);}
-  st=freshState();undoStack=[];render();};
+  st=freshState();undoStack=[];lsSet('yardsUndo2',undoStack);render();};
 cfgToUI();render();recalc();
 
 try{if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js');}catch(e){}
